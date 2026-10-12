@@ -1,0 +1,17 @@
+﻿<Application x:Class="MyQQMusic.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- 固定槽位：0 图标 1 控件样式 2 调色板 3 强调色 4 背景（ThemeService 替换 2/3/4） -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Controls/Icons.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Controls/Styles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Palettes/Dark.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Accents/Green.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Backgrounds/Dark_Default.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

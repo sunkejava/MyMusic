@@ -1,0 +1,14 @@
+# 构建产物
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# 系统文件
+Thumbs.db
+Desktop.ini

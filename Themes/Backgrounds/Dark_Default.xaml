@@ -1,0 +1,18 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 深色背景：静谧灰 -->
+    <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="0.6,1">
+        <GradientStop Color="#1B1D23" Offset="0"/>
+        <GradientStop Color="#15161C" Offset="0.55"/>
+        <GradientStop Color="#101116" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 侧边栏：与背景同色系的半透明深色面板 -->
+    <LinearGradientBrush x:Key="SidebarBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#E614161C" Offset="0"/>
+        <GradientStop Color="#F20B0C10" Offset="1"/>
+    </LinearGradientBrush>
+
+</ResourceDictionary>

@@ -1,0 +1,130 @@
+<UserControl x:Class="MyQQMusic.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="700">
+
+    <UserControl.Resources>
+        <!-- 歌曲列表容器：去选中样式，由行模板自行高亮 -->
+        <Style x:Key="SongListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="SelBg" CornerRadius="8"
+                                            Background="{TemplateBinding Background}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="SelBg" Property="Background"
+                                                    Value="{DynamicResource SelectedRowBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="28,22,28,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 + 状态 -->
+        <DockPanel LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Style="{StaticResource PageTitleStyle}" Text="音乐库"/>
+            <TextBlock DockPanel.Dock="Right" Style="{StaticResource SecondaryTextStyle}"
+                       VerticalAlignment="Bottom" Margin="0,0,0,4" Text="{Binding StatusText}"/>
+        </DockPanel>
+
+        <!-- 播放全部 + 排序 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,16,0,10">
+            <Button Style="{StaticResource PlayMainButtonStyle}" Width="Auto" Height="36"
+                    Command="{Binding PlayAllCommand}" ToolTip="播放全部歌曲">
+                <StackPanel Orientation="Horizontal" Margin="14,0">
+                    <Path Data="{DynamicResource IconPlay}" Width="13" Height="13"
+                          Stretch="Uniform" Fill="{DynamicResource OnAccentBrush}"/>
+                    <TextBlock Text="播放全部" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource OnAccentBrush}" Margin="8,0,0,0"/>
+                </StackPanel>
+            </Button>
+            <Button Style="{StaticResource ChipButtonStyle}" Margin="14,0,0,0" Tag="{Binding SortTitleActive}"
+                    Command="{Binding SetSortCommand}" CommandParameter="Title" Content="名称"/>
+            <Button Style="{StaticResource ChipButtonStyle}" Margin="6,0,0,0" Tag="{Binding SortArtistActive}"
+                    Command="{Binding SetSortCommand}" CommandParameter="Artist" Content="歌手"/>
+            <Button Style="{StaticResource ChipButtonStyle}" Margin="6,0,0,0" Tag="{Binding SortAlbumActive}"
+                    Command="{Binding SetSortCommand}" CommandParameter="Album" Content="专辑"/>
+            <Button Style="{StaticResource ChipButtonStyle}" Margin="6,0,0,0" Tag="{Binding SortTimeActive}"
+                    Command="{Binding SetSortCommand}" CommandParameter="Duration" Content="时长"/>
+        </StackPanel>
+
+        <!-- 歌曲列表（分页，每页 100 条） -->
+        <ListBox x:Name="SongList" Grid.Row="2" Style="{StaticResource SongListStyle}"
+                 SelectionMode="Extended"
+                 ItemsSource="{Binding PagedSongs}"
+                 ItemTemplate="{StaticResource SongRowTemplate}"/>
+
+        <!-- 分页条 -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center"
+                    Margin="0,8,0,12" Visibility="{Binding HasPagination, Converter={StaticResource BoolToVis}}">
+            <Button Style="{StaticResource IconButtonStyle}" Width="30" Height="30"
+                    ToolTip="上一页" Command="{Binding PrevPageCommand}"
+                    IsEnabled="{Binding HasPreviousPage}">
+                <Path Data="{DynamicResource IconPrev}" Width="11" Height="11" Stretch="Uniform"
+                      Fill="{DynamicResource IconBrush}"/>
+            </Button>
+            <TextBlock Text="{Binding PageInfoText}" VerticalAlignment="Center" Margin="12,0"
+                       FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+            <Button Style="{StaticResource IconButtonStyle}" Width="30" Height="30"
+                    ToolTip="下一页" Command="{Binding NextPageCommand}"
+                    IsEnabled="{Binding HasNextPage}">
+                <Path Data="{DynamicResource IconNext}" Width="11" Height="11" Stretch="Uniform"
+                      Fill="{DynamicResource IconBrush}"/>
+            </Button>
+        </StackPanel>
+
+        <!-- 空状态 -->
+        <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360"
+                    IsHitTestVisible="False">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=SongList}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <Path Data="{DynamicResource IconSearch}" Width="52" Height="52" Stretch="Uniform"
+                  Fill="{DynamicResource TertiaryTextBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="暂无歌曲" Style="{StaticResource SectionTitleStyle}"
+                       HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"
+                       TextAlignment="Center" Margin="0,6,0,0"
+                       Text="导入音乐后这里会显示你的本地歌曲；也可以换个搜索关键词试试。"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

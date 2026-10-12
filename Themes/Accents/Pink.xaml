@@ -1,0 +1,14 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 强调色：桃粉 -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF6B9D"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FF85B0"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#F25287"/>
+    <SolidColorBrush x:Key="AccentAlphaBrush" Color="#2EFF6B9D"/>
+    <SolidColorBrush x:Key="AccentGlowBrush" Color="#52FF6B9D"/>
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SelectedRowBrush" Color="#2EFF6B9D"/>
+
+</ResourceDictionary>

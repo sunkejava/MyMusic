@@ -1,0 +1,618 @@
+﻿<UserControl x:Class="MyQQMusic.Views.NowPlayingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:MyQQMusic.Views"
+             mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="700">
+
+    <UserControl.Resources>
+        <!-- 播放模式菜单项：悬停高亮，当前模式强调色 -->
+        <Style x:Key="PlayerMenuItemStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="7" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 歌词行缓动：进出场均为平滑过渡 -->
+        <CubicEase x:Key="LyricEase" EasingMode="EaseOut"/>
+
+        <!-- 歌词行容器：选中时高亮胶囊淡入 + 轻微放大（仅渲染变换，不影响布局） -->
+        <Style x:Key="LyricItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" MaxWidth="460" HorizontalAlignment="Center" CornerRadius="12"
+                                Padding="16,10" Margin="0,3" Background="Transparent"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BdScale"/>
+                            </Border.RenderTransform>
+                            <Grid>
+                                <Border x:Name="Hl" CornerRadius="12" Opacity="0"
+                                        Background="{DynamicResource AccentAlphaBrush}"/>
+                                <!-- GrowScale 由代码按行内进度驱动（逐渐放大高亮方式） -->
+                                <ContentPresenter x:Name="ContentHost" HorizontalAlignment="Center"
+                                                  RenderTransformOrigin="0.5,0.5">
+                                    <ContentPresenter.RenderTransform>
+                                        <ScaleTransform x:Name="GrowScale"/>
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Hl"
+                                                             Storyboard.TargetProperty="Opacity" To="1"
+                                                             Duration="0:0:0.35" EasingFunction="{StaticResource LyricEase}"/>
+                                            <DoubleAnimation Storyboard.TargetName="BdScale"
+                                                             Storyboard.TargetProperty="ScaleX" To="1.06"
+                                                             Duration="0:0:0.35" EasingFunction="{StaticResource LyricEase}"/>
+                                            <DoubleAnimation Storyboard.TargetName="BdScale"
+                                                             Storyboard.TargetProperty="ScaleY" To="1.06"
+                                                             Duration="0:0:0.35" EasingFunction="{StaticResource LyricEase}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Hl"
+                                                             Storyboard.TargetProperty="Opacity" To="0"
+                                                             Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="BdScale"
+                                                             Storyboard.TargetProperty="ScaleX" To="1"
+                                                             Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="BdScale"
+                                                             Storyboard.TargetProperty="ScaleY" To="1"
+                                                             Duration="0:0:0.25"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 歌词行内容：常态/高亮双层文字，通过透明度交叉淡入实现平滑变色 -->
+        <DataTemplate x:Key="LyricLineTemplate">
+            <Grid>
+                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"
+                           Foreground="{DynamicResource LyricInactiveBrush}"/>
+                <!-- Tag=ACCENT：代码按行内进度设置 Clip（逐渐变色的卡拉OK扫过） -->
+                <TextBlock x:Name="AccentText" Tag="ACCENT" Text="{Binding Text}" TextWrapping="Wrap"
+                           TextAlignment="Center" MaxWidth="420" FontWeight="Bold" Opacity="0"
+                           Foreground="{DynamicResource LyricActiveBrush}"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                             Value="True">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="AccentText"
+                                               Storyboard.TargetProperty="Opacity" To="1"
+                                               Duration="0:0:0.35" EasingFunction="{StaticResource LyricEase}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="AccentText"
+                                               Storyboard.TargetProperty="Opacity" To="0"
+                                               Duration="0:0:0.25"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- 皮肤背景层：渐变 / 全屏封面 / 星空 / 水印字 / 页面级音波（代码按皮肤参数填充） -->
+        <Border x:Name="SkinBg" IsHitTestVisible="False" Visibility="Collapsed">
+            <Grid IsHitTestVisible="False">
+                <local:StarFieldLayer x:Name="StarLayer"/>
+                <TextBlock x:Name="GlyphText" Text="" FontSize="280" FontWeight="Bold" Opacity="0.10"
+                           Foreground="White" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           Margin="0,0,48,24"/>
+                <local:WaveFxLayer x:Name="PageWave" IsHitTestVisible="False"/>
+            </Grid>
+        </Border>
+        <!-- 皮肤可读性遮罩（保证文字在任意皮肤底色上清晰） -->
+        <Rectangle x:Name="SkinScrim" IsHitTestVisible="False" Visibility="Collapsed"/>
+
+        <!-- 歌词模式背景：模糊封面氛围 + 可读性遮罩 -->
+        <Border x:Name="ImmersiveBg" IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <!-- 仅默认皮肤使用模糊封面背景；选择了皮肤时整页背景跟随皮肤 -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding PlayTheme}" Value="Lyric"/>
+                                <Condition Binding="{Binding HasSong}" Value="True"/>
+                                <Condition Binding="{Binding Skin.Key}" Value="Default"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Border Background="{Binding CoverBackground}"/>
+                <Rectangle Fill="{DynamicResource PlayScrimBrush}"/>
+            </Grid>
+        </Border>
+
+        <!-- 主布局 -->
+        <Grid Margin="36,26,36,20">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasSong}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左：封面区（黑胶 / 标准方封面） + 歌曲信息 -->
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PlayTheme}" Value="Lyric">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <Grid x:Name="DiscArea" Width="330" Height="330" HorizontalAlignment="Center">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlayTheme}" Value="Vinyl">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <!-- 唱片环形音波（皮肤驱动） -->
+                    <local:WaveFxLayer x:Name="DiscWave" Width="460" Height="460" IsHitTestVisible="False"/>
+                    <!-- 光晕 -->
+                    <Ellipse x:Name="GlowEllipse" Width="330" Height="330" Fill="{DynamicResource AccentGlowBrush}"/>
+                    <!-- 黑胶外圈 -->
+                    <Ellipse Width="316" Height="316" Fill="#FF17181A" Margin="7"/>
+                    <!-- 唱片纹路（仅黑胶主题） -->
+                    <Grid x:Name="Grooves" Width="316" Height="316" Margin="7" IsHitTestVisible="False">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PlayTheme}" Value="Vinyl">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Ellipse Width="296" Height="296" Stroke="#14FFFFFF" StrokeThickness="1"/>
+                        <Ellipse Width="278" Height="278" Stroke="#0FFFFFFF" StrokeThickness="1"/>
+                        <Ellipse Width="268" Height="268" Stroke="#14FFFFFF" StrokeThickness="1"/>
+                    </Grid>
+                    <!-- 旋转封面 -->
+                    <Grid x:Name="Disc" Width="252" Height="252">
+                        <Grid.RenderTransform>
+                            <RotateTransform x:Name="DiscRot" CenterX="126" CenterY="126"/>
+                        </Grid.RenderTransform>
+                        <Ellipse Width="252" Height="252" Fill="{DynamicResource CoverPlaceholderBrush}"/>
+                        <Path Data="{DynamicResource IconDisc}" Width="96" Height="96" Stretch="Uniform"
+                              Fill="{DynamicResource TertiaryTextBrush}" HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                        <Ellipse Width="252" Height="252">
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="{Binding FullCover}" Stretch="UniformToFill"/>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                    </Grid>
+                    <!-- 唱片染色（彩胶/黑金等皮肤，代码设置 Fill 与 Opacity） -->
+                    <Ellipse x:Name="DiscTint" Width="316" Height="316" Margin="7" Opacity="0"
+                             IsHitTestVisible="False"/>
+                    <!-- 流光扫过（光影类皮肤） -->
+                    <Grid x:Name="SheenClip" Width="316" Height="316" Margin="7" IsHitTestVisible="False"
+                          Visibility="Collapsed">
+                        <Grid.Clip>
+                            <EllipseGeometry Center="158,158" RadiusX="158" RadiusY="158"/>
+                        </Grid.Clip>
+                        <Rectangle x:Name="SheenBand" Width="110" Height="460" RenderTransformOrigin="0.5,0.5"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Rectangle.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="22"/>
+                                    <TranslateTransform x:Name="SheenMove"/>
+                                </TransformGroup>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#3AFFFFFF" Offset="0.5"/>
+                                    <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Grid>
+                    <!-- 中心轴（皮肤可改厂牌圈颜色） -->
+                    <Ellipse x:Name="DiscHub" Width="58" Height="58" Fill="{DynamicResource CoverPlaceholderBrush}"
+                             Stroke="#33FFFFFF" StrokeThickness="1"/>
+                    <Ellipse Width="12" Height="12" Fill="#FF17181A"/>
+                    <!-- 唱臂装饰（仅黑胶主题） -->
+                    <Grid x:Name="ToneArm" Width="330" Height="330" IsHitTestVisible="False">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PlayTheme}" Value="Vinyl">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <!-- 唱臂底座 -->
+                        <Ellipse Width="36" Height="36" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                 Margin="0,14,10,0" Fill="#FF26282B" Stroke="#40FFFFFF" StrokeThickness="1"/>
+                        <!-- 唱臂杆 + 唱头：自底座顺时针摆向唱片 -->
+                        <Grid HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,32,26,0"
+                              RenderTransformOrigin="0.5,0">
+                            <Grid.RenderTransform>
+                                <RotateTransform Angle="42"/>
+                            </Grid.RenderTransform>
+                            <Border Width="5" Height="142" CornerRadius="2.5" Background="#FF3B3E42"
+                                    HorizontalAlignment="Center"/>
+                            <Border Width="16" Height="26" CornerRadius="4" Background="#FF55585E"
+                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-8"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <!-- 标准模式：圆角方形大封面 -->
+                <Grid x:Name="SquareCover" Width="300" Height="300" HorizontalAlignment="Center">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlayTheme}" Value="Standard">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Border CornerRadius="18" Background="{DynamicResource CoverPlaceholderBrush}">
+                        <Path Data="{DynamicResource IconDisc}" Width="88" Height="88" Stretch="Uniform"
+                              Fill="{DynamicResource TertiaryTextBrush}" HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                    </Border>
+                    <Border CornerRadius="18">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{Binding FullCover}" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <Border CornerRadius="18" BorderBrush="#33FFFFFF" BorderThickness="1"/>
+                </Grid>
+
+                <!-- 歌曲信息 -->
+                <StackPanel Margin="10,26,10,0" HorizontalAlignment="Center" MaxWidth="360">
+                    <DockPanel LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource IconButtonStyle}"
+                                Width="38" Height="38" Margin="10,0,0,0" VerticalAlignment="Center"
+                                ToolTip="我喜欢" Command="{Binding ToggleLikeCommand}">
+                            <Path Width="20" Height="20" Stretch="Uniform"
+                                  Data="{Binding IsLiked, Converter={StaticResource ToggleIcon}, ConverterParameter=IconHeart:IconHeartFilled}"
+                                  Fill="{DynamicResource IconBrush}"/>
+                        </Button>
+                        <TextBlock Text="{Binding CurrentSong.DisplayTitle}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap"
+                                   TextAlignment="Center" MaxHeight="58"/>
+                    </DockPanel>
+                    <TextBlock Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Text="{Binding CurrentSong.Artist}"/>
+                    <TextBlock Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource TertiaryTextBrush}"
+                               Text="{Binding CurrentSong.Album}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 右：歌词（歌词模式时扩展为整页居中） -->
+            <Grid Grid.Column="1" Margin="44,0,0,0">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PlayTheme}" Value="Lyric">
+                                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                                <Setter Property="Margin" Value="0"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <TextBlock Text="歌词" VerticalAlignment="Top" Margin="8,0,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource SectionTitleStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlayTheme}" Value="Lyric">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <!-- 歌词模式：顶部居中歌曲信息（网易云式：小封面 + 歌名 + 歌手） -->
+                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" MaxWidth="560"
+                           IsHitTestVisible="False">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlayTheme}" Value="Lyric">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <Border Width="64" Height="64" CornerRadius="10" Margin="0,14,0,0"
+                            HorizontalAlignment="Center">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{Binding FullCover}" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <TextBlock Text="{Binding CurrentSong.DisplayTitle}" FontSize="22" FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" TextAlignment="Center" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,12,0,0"/>
+                    <TextBlock Text="{Binding CurrentSong.Artist}" FontSize="13" TextAlignment="Center"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="0,6,0,0"/>
+                </StackPanel>
+                <!-- 歌词列表：像素级滚动（CanContentScroll=False）配合代码端偏移动画实现平滑滚动，上下渐隐遮罩 -->
+                <ListBox x:Name="LyricList" ItemsSource="{Binding Lyrics}" SelectedIndex="{Binding LyricIndex, Mode=OneWay}"
+                         ItemContainerStyle="{StaticResource LyricItemStyle}" ItemTemplate="{StaticResource LyricLineTemplate}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False"
+                         Focusable="False" HorizontalContentAlignment="Stretch">
+                    <ListBox.Style>
+                        <Style TargetType="ListBox">
+                            <Setter Property="Padding" Value="0,44,0,240"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlayTheme}" Value="Lyric">
+                                    <Setter Property="Padding" Value="0,110,0,240"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.Style>
+                    <ListBox.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="Transparent" Offset="0"/>
+                            <GradientStop Color="White" Offset="0.12"/>
+                            <GradientStop Color="White" Offset="0.84"/>
+                            <GradientStop Color="Transparent" Offset="1"/>
+                        </LinearGradientBrush>
+                    </ListBox.OpacityMask>
+                </ListBox>
+
+                <!-- 无歌词提示 -->
+                <TextBlock Text="暂无歌词，可在歌曲同目录放置同名 .lrc 文件"
+                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryTextStyle}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasLyrics}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Grid>
+
+        <!-- 无正在播放歌曲 -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasSong}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <Path Data="{DynamicResource IconLyric}" Width="64" Height="64" Stretch="Uniform"
+                  Fill="{DynamicResource TertiaryTextBrush}" HorizontalAlignment="Center"/>
+            <TextBlock Text="还没有正在播放的歌曲" Style="{StaticResource SectionTitleStyle}"
+                       HorizontalAlignment="Center" Margin="0,16,0,0"/>
+            <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"
+                       TextAlignment="Center" Margin="0,6,0,0"
+                       Text="去首页或音乐库双击一首歌，这里就会开始播放并滚动歌词。"/>
+        </StackPanel>
+
+        <!-- 左上角：向下收起播放页（网易云式） -->
+        <Border x:Name="PageTopLeft" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Margin="14,10,0,0" Panel.ZIndex="50" Background="Transparent"
+                MouseLeftButtonDown="PageControls_MouseLeftButtonDown">
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34"
+                    ToolTip="收起播放页" Click="Collapse_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M2,5 L8,11 L14,5"/>
+            </Button>
+        </Border>
+
+        <!-- 右上角：播放模式 / 全屏纯享 / 最小化 / 最大化 / 关闭（空白处可拖动窗口） -->
+        <StackPanel x:Name="PageControls" Orientation="Horizontal" HorizontalAlignment="Right"
+                    VerticalAlignment="Top" Margin="0,10,14,0" Panel.ZIndex="50"
+                    MouseLeftButtonDown="PageControls_MouseLeftButtonDown">
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34"
+                    ToolTip="播放模式与皮肤" Click="SwitchMode_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4"
+                      Data="M8,1 A7,7 0 1,0 8,15 A7,7 0 1,0 8,1 M8,6.6 A1.4,1.4 0 1,0 8,9.4 A1.4,1.4 0 1,0 8,6.6"/>
+            </Button>
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34" Margin="4,0,0,0"
+                    ToolTip="全屏纯享（隐藏顶栏与侧栏）" Click="PureMode_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M1,5 L1,1 L5,1 M11,5 L11,1 L7,1 M1,9 L1,13 L5,13 M11,9 L11,13 L7,13"/>
+            </Button>
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34" Margin="4,0,0,0"
+                    ToolTip="最小化" Click="Minimize_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M2,8 L12,8"/>
+            </Button>
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34" Margin="4,0,0,0"
+                    ToolTip="最大化 / 还原" Click="Maximize_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4"
+                      Data="M2,2 L12,2 L12,12 L2,12 Z"/>
+            </Button>
+            <Button Style="{StaticResource IconButtonStyle}" Width="34" Height="34" Margin="4,0,0,0"
+                    ToolTip="关闭" Click="Close_Click">
+                <Path Width="16" Height="16" Stretch="Uniform" Fill="Transparent"
+                      Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M2,2 L12,12 M12,2 L2,12"/>
+            </Button>
+        </StackPanel>
+
+        <!-- 右侧抽屉：播放模式 + 播放皮肤（点击模式按钮后滑出，可随时切换查看效果） -->
+        <Border x:Name="SidePanel" Width="330" HorizontalAlignment="Right" Panel.ZIndex="60"
+                Margin="0,56,12,12" Visibility="Collapsed" CornerRadius="12"
+                Background="{DynamicResource QueuePanelBrush}"
+                BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SidePanelMove" X="350"/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.4" Color="#000000"/>
+            </Border.Effect>
+            <DockPanel Margin="14,10,10,10">
+                <DockPanel DockPanel.Dock="Top" LastChildFill="True" Margin="4,0,0,6">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButtonStyle}"
+                            Width="30" Height="30" ToolTip="关闭" Click="CloseSidePanel_Click">
+                        <Path Width="13" Height="13" Stretch="Uniform" Fill="Transparent"
+                              Stroke="{DynamicResource IconBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M2,2 L12,12 M12,2 L2,12"/>
+                    </Button>
+                    <TextBlock Text="播放设置" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                             Padding="0,0,6,0">
+                    <StackPanel>
+                        <TextBlock Text="播放模式" FontSize="12" FontWeight="SemiBold" Margin="4,4,0,6"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                        <Button Style="{StaticResource PlayerMenuItemStyle}" Content="标准模式" Uid="Standard"
+                                Click="ModeMenuItem_Click">
+                            <Button.Tag>
+                                <MultiBinding Converter="{StaticResource EqualParamConv}" ConverterParameter="Standard">
+                                    <Binding Path="PlayTheme"/>
+                                </MultiBinding>
+                            </Button.Tag>
+                        </Button>
+                        <Button Style="{StaticResource PlayerMenuItemStyle}" Content="黑胶模式" Uid="Vinyl"
+                                Click="ModeMenuItem_Click">
+                            <Button.Tag>
+                                <MultiBinding Converter="{StaticResource EqualParamConv}" ConverterParameter="Vinyl">
+                                    <Binding Path="PlayTheme"/>
+                                </MultiBinding>
+                            </Button.Tag>
+                        </Button>
+                        <Button Style="{StaticResource PlayerMenuItemStyle}" Content="歌词模式" Uid="Lyric"
+                                Click="ModeMenuItem_Click">
+                            <Button.Tag>
+                                <MultiBinding Converter="{StaticResource EqualParamConv}" ConverterParameter="Lyric">
+                                    <Binding Path="PlayTheme"/>
+                                </MultiBinding>
+                            </Button.Tag>
+                        </Button>
+
+                        <TextBlock Text="播放皮肤" FontSize="12" FontWeight="SemiBold" Margin="4,14,0,6"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                        <ItemsControl ItemsSource="{Binding SkinGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Group}" FontSize="11" Margin="4,0,0,4"
+                                                   Foreground="{DynamicResource TertiaryTextBrush}"/>
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <!-- 当前皮肤带勾选徽章；点击即时切换查看效果 -->
+                                                    <Button Margin="0,0,8,8" Uid="{Binding Key}"
+                                                            Style="{StaticResource SkinSwatchStyle}"
+                                                            Click="SkinClick">
+                                                        <Button.Tag>
+                                                            <MultiBinding Converter="{StaticResource EqualConv}">
+                                                                <Binding Path="DataContext.CurrentSkinKey"
+                                                                         RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                                <Binding Path="Key"/>
+                                                            </MultiBinding>
+                                                        </Button.Tag>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
