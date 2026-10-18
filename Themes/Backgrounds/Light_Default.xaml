@@ -2,17 +2,17 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- 浅色背景：晨雾白 -->
+    <!-- 浅色背景：晨雾白（Fluent 冷灰白，干净留白） -->
     <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="0.6,1">
-        <GradientStop Color="#F7F8FA" Offset="0"/>
-        <GradientStop Color="#F1F3F7" Offset="0.55"/>
-        <GradientStop Color="#EBEEF3" Offset="1"/>
+        <GradientStop Color="#FAFBFD" Offset="0"/>
+        <GradientStop Color="#F2F4F8" Offset="0.55"/>
+        <GradientStop Color="#E9ECF2" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- 侧边栏：与背景同色系的半透明面板，略深于主背景形成层次 -->
     <LinearGradientBrush x:Key="SidebarBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#F2EFF1F6" Offset="0"/>
-        <GradientStop Color="#F2E4E8EF" Offset="1"/>
+        <GradientStop Color="#F2F3F5F9" Offset="0"/>
+        <GradientStop Color="#F2E8EBF1" Offset="1"/>
     </LinearGradientBrush>
 
 </ResourceDictionary>

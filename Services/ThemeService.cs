@@ -9,8 +9,9 @@ namespace MyQQMusic.Services;
 /// <summary>
 /// 运行时主题切换：通过替换 App.Resources.MergedDictionaries 中的
 /// 调色板 / 强调色 / 背景三个槽位实现（所有颜色均以 DynamicResource 引用）。
-/// 强调色与背景在深浅主题切换时自动适配：浅色主题下由基础强调色
-/// 派生对比度安全的变体；内置背景按色系映射到另一主题的对应背景。
+/// 强调色按当前主题做对比度自适应（浅色向深调整、深色向亮调整），
+/// 保证在任意主题下均有足够的文字对比度；内置背景按色系映射到另一
+/// 主题的对应背景。
 /// </summary>
 public static class ThemeService
 {
@@ -24,7 +25,7 @@ public static class ThemeService
     public static readonly (string Key, string Name, string Hex)[] AccentOptions =
     {
         ("Green", "QQ 绿", "#FF31C272"),
-        ("Blue", "海蓝", "#FF339EF8"),
+        ("Blue", "科技蓝", "#FF0078D4"),
         ("Purple", "幻紫", "#FFA670FF"),
         ("Pink", "桃粉", "#FFFF6B9D"),
         ("Orange", "暖橙", "#FFFFA94D")
@@ -73,13 +74,6 @@ public static class ThemeService
         ["Frost"] = "Ocean",
         ["Morning"] = "Sunset",
         ["Sakura"] = "Violet"
-    };
-
-    // 浅色主题下需要覆盖的强调色键（由基础色派生，保证浅底对比度）
-    static readonly string[] AccentOverrideKeys =
-    {
-        "AccentBrush", "AccentHoverBrush", "AccentPressedBrush",
-        "AccentAlphaBrush", "AccentGlowBrush", "OnAccentBrush", "SelectedRowBrush"
     };
 
     // App.xaml 中 MergedDictionaries 固定顺序：
@@ -158,51 +152,46 @@ public static class ThemeService
 
     public static void ApplyAccent(string accent)
     {
-        // 自定义强调色：直接由录入色派生全套覆盖（深浅主题均在顶层资源覆盖）
+        Color baseColor;
         if (IsHexColor(accent))
         {
-            var baseColor = (Color)ColorConverter.ConvertFromString(accent);
-            var customColor = IsLight() && RelativeLuminance(baseColor) > 0.55
-                ? Mix(baseColor, Colors.Black, 0.18) : baseColor;
-            var customResources = Application.Current.Resources;
-            SetOverride(customResources, "AccentBrush", customColor);
-            SetOverride(customResources, "AccentHoverBrush", Mix(customColor, Colors.Black, 0.12));
-            SetOverride(customResources, "AccentPressedBrush", Mix(customColor, Colors.Black, 0.25));
-            SetOverride(customResources, "AccentAlphaBrush", WithAlpha(customColor, 0x1F));
-            SetOverride(customResources, "AccentGlowBrush", WithAlpha(customColor, 0x28));
-            SetOverride(customResources, "SelectedRowBrush", WithAlpha(customColor, 0x1F));
-            SetOverride(customResources, "OnAccentBrush",
-                RelativeLuminance(customColor) > 0.6 ? Color.FromRgb(0x1F, 0x23, 0x29) : Colors.White);
-            return;
-        }
-
-        if (AccentOptions.All(a => a.Key != accent)) accent = "Green";
-        Dict(3).Source = new Uri($"{Base}Accents/{accent}.xaml");
-
-        var resources = Application.Current.Resources;
-        var option = AccentOptions.First(a => a.Key == accent);
-
-        if (IsLight())
-        {
-            // 浅色主题：由基础强调色派生深一档的变体，避免浅底上过亮看不清文字
-            var baseColor = (Color)ColorConverter.ConvertFromString(option.Hex);
-            var accentColor = RelativeLuminance(baseColor) > 0.55
-                ? Mix(baseColor, Colors.Black, 0.18) : baseColor;
-
-            SetOverride(resources, "AccentBrush", accentColor);
-            SetOverride(resources, "AccentHoverBrush", Mix(accentColor, Colors.Black, 0.12));
-            SetOverride(resources, "AccentPressedBrush", Mix(accentColor, Colors.Black, 0.25));
-            SetOverride(resources, "AccentAlphaBrush", WithAlpha(accentColor, 0x1F));
-            SetOverride(resources, "AccentGlowBrush", WithAlpha(accentColor, 0x28));
-            SetOverride(resources, "SelectedRowBrush", WithAlpha(accentColor, 0x1F));
-            SetOverride(resources, "OnAccentBrush",
-                RelativeLuminance(accentColor) > 0.6 ? Color.FromRgb(0x1F, 0x23, 0x29) : Colors.White);
+            // 自定义强调色：直接以录入色为基色做主题自适应派生
+            baseColor = (Color)ColorConverter.ConvertFromString(accent);
         }
         else
         {
-            // 深色主题：移除覆盖，恢复强调色字典中的原始定义
-            foreach (var key in AccentOverrideKeys) resources.Remove(key);
+            if (AccentOptions.All(a => a.Key != accent)) accent = "Green";
+            Dict(3).Source = new Uri($"{Base}Accents/{accent}.xaml");
+            baseColor = (Color)ColorConverter.ConvertFromString(AccentOptions.First(a => a.Key == accent).Hex);
         }
+        ApplyAccentColors(baseColor);
+    }
+
+    /// <summary>
+    /// 由基色派生全套强调色资源并在顶层覆盖：按当前主题循环微调明度，
+    /// 浅色主题向黑靠拢、深色主题向白靠拢，直至相对亮度落入可读区间（≤0.22），
+    /// 使同一份基色在深浅两种主题下都能满足文字对比度要求。
+    /// </summary>
+    static void ApplyAccentColors(Color baseColor)
+    {
+        bool light = IsLight();
+        var c = baseColor;
+        for (int i = 0; i < 6; i++)
+        {
+            double lum = RelativeLuminance(c);
+            if (light ? lum <= 0.22 : lum >= 0.22) break;
+            c = Mix(c, light ? Colors.Black : Colors.White, 0.12);
+        }
+
+        var resources = Application.Current.Resources;
+        SetOverride(resources, "AccentBrush", c);
+        SetOverride(resources, "AccentHoverBrush", light ? Mix(c, Colors.Black, 0.12) : Mix(c, Colors.White, 0.12));
+        SetOverride(resources, "AccentPressedBrush", light ? Mix(c, Colors.Black, 0.25) : Mix(c, Colors.Black, 0.18));
+        SetOverride(resources, "AccentAlphaBrush", WithAlpha(c, 0x1F));
+        SetOverride(resources, "AccentGlowBrush", WithAlpha(c, 0x2E));
+        SetOverride(resources, "SelectedRowBrush", WithAlpha(c, 0x1F));
+        SetOverride(resources, "OnAccentBrush",
+            RelativeLuminance(c) > 0.6 ? Color.FromRgb(0x1F, 0x23, 0x29) : Colors.White);
     }
 
     static void SetOverride(ResourceDictionary resources, string key, Color color)

@@ -3,42 +3,47 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:s="clr-namespace:System;assembly=mscorlib">
 
-    <!-- 深色主题调色板 -->
+    <!-- 深色主题调色板：Fluent Design / WinUI 3 风格 -->
     <s:Boolean x:Key="ThemeIsDark">True</s:Boolean>
 
-    <!-- 结构层（半透明叠加在背景之上） -->
-    <SolidColorBrush x:Key="SidebarBrush" Color="#B3000000"/>
-    <SolidColorBrush x:Key="PlayerBarBrush" Color="#E6121217"/>
+    <!-- 结构层（半透明叠加在背景之上，形成 Fluent 亚克力分层） -->
+    <SolidColorBrush x:Key="SidebarBrush" Color="#C2000000"/>
+    <SolidColorBrush x:Key="PlayerBarBrush" Color="#F01C1D21"/>
     <SolidColorBrush x:Key="TopBarBrush" Color="#01000000"/>
-    <SolidColorBrush x:Key="CardBrush" Color="#1FFFFFFF"/>
-    <SolidColorBrush x:Key="CardHoverBrush" Color="#2EFFFFFF"/>
-    <SolidColorBrush x:Key="HoverBrush" Color="#1AFFFFFF"/>
-    <SolidColorBrush x:Key="InputBrush" Color="#1AFFFFFF"/>
-    <SolidColorBrush x:Key="LineBrush" Color="#1FFFFFFF"/>
+    <SolidColorBrush x:Key="CardBrush" Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#30FFFFFF"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#1CFFFFFF"/>
+    <SolidColorBrush x:Key="InputBrush" Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="LineBrush" Color="#2EFFFFFF"/>
+
+    <!-- 控件表面（Fluent 控件底色：按钮/输入面板） -->
+    <SolidColorBrush x:Key="ButtonFaceBrush" Color="#E62A2B30"/>
+    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#F033343A"/>
+    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#F0222328"/>
 
     <!-- 文字 -->
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F5F6F8"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B8BCC4"/>
-    <SolidColorBrush x:Key="TertiaryTextBrush" Color="#7A7F89"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F3F3F3"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#C7CACF"/>
+    <SolidColorBrush x:Key="TertiaryTextBrush" Color="#8B8F96"/>
 
     <!-- 图标 -->
-    <SolidColorBrush x:Key="IconBrush" Color="#B8BCC4"/>
-    <SolidColorBrush x:Key="IconHoverBrush" Color="#F5F6F8"/>
+    <SolidColorBrush x:Key="IconBrush" Color="#C7CACF"/>
+    <SolidColorBrush x:Key="IconHoverBrush" Color="#F3F3F3"/>
 
     <!-- 其他 -->
-    <SolidColorBrush x:Key="CoverPlaceholderBrush" Color="#2A2E36"/>
-    <SolidColorBrush x:Key="ScrollBarBrush" Color="#33FFFFFF"/>
-    <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="#59FFFFFF"/>
-    <SolidColorBrush x:Key="SliderTrackBrush" Color="#33FFFFFF"/>
-    <SolidColorBrush x:Key="LyricInactiveBrush" Color="#6E7480"/>
+    <SolidColorBrush x:Key="CoverPlaceholderBrush" Color="#2D2E33"/>
+    <SolidColorBrush x:Key="ScrollBarBrush" Color="#4DFFFFFF"/>
+    <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="#73FFFFFF"/>
+    <SolidColorBrush x:Key="SliderTrackBrush" Color="#40FFFFFF"/>
+    <SolidColorBrush x:Key="LyricInactiveBrush" Color="#8B8F96"/>
     <!-- 歌词高亮色：默认跟随强调色，可由设置页自定义覆盖 -->
     <DynamicResource x:Key="LyricActiveBrush" ResourceKey="AccentBrush"/>
-    <SolidColorBrush x:Key="DangerBrush" Color="#E5534B"/>
-    <SolidColorBrush x:Key="TooltipBrush" Color="#2A2E36"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#E5484D"/>
+    <SolidColorBrush x:Key="TooltipBrush" Color="#2D2D31"/>
     <!-- 弹窗磨砂背景：配合 DWM 毛玻璃（GlassFrameThickness=-1），保留一定透明度透出桌面 -->
-    <SolidColorBrush x:Key="DialogFrostBrush" Color="#D92A2E36"/>
+    <SolidColorBrush x:Key="DialogFrostBrush" Color="#E61F2024"/>
     <!-- 播放队列面板：窗内微透明面板背景，透出页面内容形成轻磨砂层次 -->
-    <SolidColorBrush x:Key="QueuePanelBrush" Color="#EB2A2E36"/>
+    <SolidColorBrush x:Key="QueuePanelBrush" Color="#F01F2024"/>
     <!-- 播放页沉浸模式：封面取色背景上的主题遮罩，保证文字可读 -->
     <SolidColorBrush x:Key="PlayScrimBrush" Color="#8C0B0C0E"/>
     <SolidColorBrush x:Key="OverlayBrush" Color="#99000000"/>

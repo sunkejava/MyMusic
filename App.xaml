@@ -9,7 +9,7 @@
                 <ResourceDictionary Source="pack://application:,,,/Themes/Controls/Icons.xaml"/>
                 <ResourceDictionary Source="pack://application:,,,/Themes/Controls/Styles.xaml"/>
                 <ResourceDictionary Source="pack://application:,,,/Themes/Palettes/Dark.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Themes/Accents/Green.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Accents/Blue.xaml"/>
                 <ResourceDictionary Source="pack://application:,,,/Themes/Backgrounds/Dark_Default.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

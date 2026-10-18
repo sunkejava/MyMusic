@@ -22,7 +22,7 @@ public class AppSettings
     public string Theme { get; set; } = "Dark";
 
     /// <summary>强调色："Green" / "Blue" / "Purple" / "Pink" / "Orange"</summary>
-    public string Accent { get; set; } = "Green";
+    public string Accent { get; set; } = "Blue";
 
     /// <summary>内置背景键："Default" / "Ocean" / "Forest" / "Sunset" / "Violet"（深色）；"Default" / "Morning" / "Frost" / "Sakura"（浅色）；"Custom" 表示自定义图片</summary>
     public string Background { get; set; } = "Default";
